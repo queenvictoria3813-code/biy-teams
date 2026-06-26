@@ -323,7 +323,6 @@ Apply Now
 <?php
 //current team members listed is team csv file in same directory as this file
 // get the csv file - add to array
-ini_set('auto_detect_line_endings', TRUE);
 $csv = array_map('str_getcsv', file('team-page.csv'));
 ?>
 
@@ -390,7 +389,11 @@ if($value[12]=='TRUE'){?>
         <?php if (!empty($value[8])) {?> 
           Skills Wanted: <?php echo $value[8]; ?>
           <br>
-		<?php };?>       
+		<?php };?> 
+<!-- Favorite Books Field -->
+        <?php if (!empty($value[21])) {?> 
+          Favorite Books: <?php echo $value[21]; ?>
+		<?php };?>      
 <!-- Website Fields -->
         <?php if (!empty($value[9])) {?>
           <a href="<?php echo $value[10]; ?>">
@@ -402,11 +405,6 @@ if($value[12]=='TRUE'){?>
           | <a href="<?php echo $value[20]; ?>">
 		    <?php echo $value[19];?>
           </a>
-		<?php };?>
-<!-- Favorite Books Field -->
-        <?php if (!empty($value[21])) {?> 
-          <br>
-          Favorite Books: <?php echo $value[21]; ?>
 		<?php };?>
         </font>
       </td>
@@ -486,7 +484,11 @@ if($value[13]=='TRUE'){?>
         <?php if (!empty($value[8])) {?> 
           Skills Wanted: <?php echo $value[8]; ?>
           <br>
-		<?php };?>       
+		<?php };?>   
+<!-- Favorite Books Field -->
+        <?php if (!empty($value[21])) {?> 
+          Favorite Books: <?php echo $value[21]; ?>
+		<?php };?>    
 <!-- Website Fields -->
         <?php if (!empty($value[9])) {?>
           <a href="<?php echo $value[10]; ?>">
