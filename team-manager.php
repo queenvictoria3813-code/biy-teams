@@ -32,16 +32,38 @@ function saveMeta($metaFile, $meta) {
   file_put_contents($metaFile, json_encode($meta, JSON_PRETTY_PRINT));
 }
 
+// ─── UTF-8 HELPER ─────────────────────────────────────────────────────────────
+// Converts any string to valid UTF-8, replacing bad bytes.
+// Handles BOM, Windows-1252 curly quotes, smart apostrophes, etc.
+function toUtf8($str) {
+  // Strip BOM if present
+  $str = preg_replace('/^\xEF\xBB\xBF/', '', $str);
+  // Already valid UTF-8? Done.
+  if (mb_check_encoding($str, 'UTF-8')) return $str;
+  // Try Windows-1252 (covers curly quotes, em-dashes, etc.)
+  $converted = iconv('Windows-1252', 'UTF-8//TRANSLIT//IGNORE', $str);
+  if ($converted !== false) return $converted;
+  // Last resort: strip any non-UTF-8 bytes
+  return mb_convert_encoding($str, 'UTF-8', 'UTF-8');
+}
+
+function sanitizeRow($row) {
+  return array_map('toUtf8', $row);
+}
+
 // ─── CSV HELPERS ──────────────────────────────────────────────────────────────
 function readCSV($file) {
   if (!file_exists($file)) return [[], []];
-  $rows = array_map('str_getcsv', file($file));
+  // Read raw bytes then sanitize each cell to valid UTF-8
+  $rows = array_map(fn($line) => sanitizeRow(str_getcsv($line)), file($file));
   $header = array_shift($rows);
   return [$header, $rows];
 }
 
 function writeCSV($file, $header, $rows) {
+  // Write with UTF-8 BOM so Excel on Windows also reads it correctly
   $fp = fopen($file, 'w');
+  fwrite($fp, "\xEF\xBB\xBF"); // UTF-8 BOM
   fputcsv($fp, $header);
   foreach ($rows as $row) fputcsv($fp, $row);
   fclose($fp);
@@ -158,15 +180,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // ─── PREPARE FOR TEMPLATE ─────────────────────────────────────────────────────
 $rows      = array_map(fn($r) => padRow($r, count($meta['columns'])), $rows);
-$rowsJson  = json_encode($rows);
-$metaJson  = json_encode($meta['columns']);
+// JSON_INVALID_UTF8_SUBSTITUTE replaces bad bytes with ? instead of returning false
+$jsonFlags = JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE;
+$rowsJson  = json_encode($rows,            $jsonFlags) ?: '[]';
+$metaJson  = json_encode($meta['columns'], $jsonFlags) ?: '[]';
 
 // Active page-flag columns
 $pageFlags = [];
 foreach ($meta['columns'] as $i => $col) {
   if ($col['type'] === 'page' && !$col['archived']) $pageFlags[$i] = $col['name'];
 }
-$pageFlagsJson = json_encode($pageFlags);
+$pageFlagsJson = json_encode($pageFlags, JSON_UNESCAPED_UNICODE | JSON_INVALID_UTF8_SUBSTITUTE) ?: '{}';
 ?>
 <!DOCTYPE html>
 <html lang="en">
